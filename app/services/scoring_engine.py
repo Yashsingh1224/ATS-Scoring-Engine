@@ -1,10 +1,13 @@
 from app.models.schemas import ResumeEntities, JDEntities, MatchResponse, ScoreBreakdown
 
 class ScoringEngine:
-    def calculate_score(self, resume: ResumeEntities, jd: JDEntities) -> MatchResponse:
+    def calculate_score(self, resume: ResumeEntities, jd: JDEntities, weights: dict = None) -> MatchResponse:
         # 1. Skills Scoring (Weight 50%)
         res_skills = set(s.lower() for s in resume.skills)
         jd_skills = set(s.lower() for s in jd.required_skills)
+        
+        # Normalize weights to lowercase if provided
+        skill_weights = {k.lower(): v for k, v in weights.items()} if weights else {}
 
         if not jd_skills:
             skill_score = 50.0
@@ -13,7 +16,21 @@ class ScoringEngine:
         else:
             matched = list(res_skills.intersection(jd_skills))
             missing = list(jd_skills - res_skills)
-            skill_score = (len(matched) / len(jd_skills)) * 50.0
+            
+            # Calculate weighted score
+            total_possible_weight = 0.0
+            earned_weight = 0.0
+            
+            for skill in jd_skills:
+                weight = skill_weights.get(skill, 1.0)
+                total_possible_weight += weight
+                if skill in res_skills:
+                    earned_weight += weight
+            
+            if total_possible_weight > 0:
+                skill_score = (earned_weight / total_possible_weight) * 50.0
+            else:
+                skill_score = 0.0
 
         # 2. Experience Scoring (Weight 30%)
         if jd.min_experience_years == 0:
@@ -57,3 +74,5 @@ class ScoringEngine:
             matched_skills=matched,
             summary=summary
         )
+
+

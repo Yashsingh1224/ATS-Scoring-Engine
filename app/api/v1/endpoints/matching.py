@@ -1,4 +1,6 @@
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException
+from typing import Optional
+import json
 from app.services.resume_processor import ResumeProcessor
 from app.services.jd_analyzer import JDAnalyzer
 from app.services.scoring_engine import ScoringEngine
@@ -14,7 +16,8 @@ scorer = ScoringEngine()
 @router.post("/score", response_model=MatchResponse)
 async def score_resume(
     resume_file: UploadFile = File(...),
-    jd_text: str = Form(...)
+    jd_text: str = Form(...),
+    weights: Optional[str] = Form(None)
 ):
     # 1. Read PDF
     if resume_file.content_type != "application/pdf":
@@ -29,8 +32,16 @@ async def score_resume(
     # 2. Extract Entities (Gemini)
     resume_data = resume_processor.extract_entities(raw_resume_text)
     jd_data = jd_analyzer.analyze(jd_text)
+
+    # Parse weights if provided
+    weight_dict = {}
+    if weights:
+        try:
+            weight_dict = json.loads(weights)
+        except json.JSONDecodeError:
+            raise HTTPException(status_code=400, detail="Invalid JSON format for weights")
     
     # 3. Calculate Score (Math)
-    result = scorer.calculate_score(resume_data, jd_data)
+    result = scorer.calculate_score(resume_data, jd_data, weight_dict)
     
     return result
