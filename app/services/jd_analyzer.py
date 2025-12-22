@@ -28,15 +28,16 @@ class JDAnalyzer:
 
             
 
-        model = genai.GenerativeModel('gemini-2.5-flash')
+        model = genai.GenerativeModel(
+            'gemini-2.5-flash',
+            generation_config={"temperature": 0.0}
+        )
 
         
 
         prompt = f"""
 
         Extract job requirements into JSON.
-
-        
 
         Strict JSON Schema:
 
@@ -52,15 +53,12 @@ class JDAnalyzer:
 
         }}
 
-        
-
+    
         Job Description:
 
         {jd_text}
 
         """
-
-        
 
         try:
 
@@ -70,8 +68,6 @@ class JDAnalyzer:
 
             logger.debug(f"Gemini response received: {response.text[:100]}...")
 
-            
-
             clean_json = response.text.replace('```json', '').replace('```', '').strip()
 
             data = json.loads(clean_json)
@@ -79,8 +75,6 @@ class JDAnalyzer:
             logger.info(f"Successfully extracted JD entities: {len(data.get('required_skills', []))} required skills found")
 
             return JDEntities(**data)
-
-            
 
         except json.JSONDecodeError as e:
 

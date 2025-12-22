@@ -12,8 +12,6 @@ from app.core.config import settings
 
 from app.models.schemas import ResumeEntities
 
-
-
 logger = logging.getLogger(__name__)
 
 genai.configure(api_key=settings.GOOGLE_API_KEY)
@@ -58,15 +56,16 @@ class ResumeProcessor:
 
             
 
-        model = genai.GenerativeModel('gemini-2.5-flash')
+        model = genai.GenerativeModel(
+            'gemini-2.5-flash',
+            generation_config={"temperature": 0.0}
+        )
 
         
 
         prompt = f"""
 
         You are an ATS parser. Extract data from this resume into JSON.
-
-        
 
         Strict JSON Schema:
 
@@ -86,15 +85,11 @@ class ResumeProcessor:
 
         }}
 
-        
-
         Resume Text:
 
         {raw_text[:10000]}
 
         """
-
-        
 
         try:
 
@@ -113,8 +108,6 @@ class ResumeProcessor:
             logger.info(f"Successfully extracted resume entities: {len(data.get('skills', []))} skills found")
 
             return ResumeEntities(**data)
-
-            
 
         except json.JSONDecodeError as e:
 
