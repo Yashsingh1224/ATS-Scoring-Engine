@@ -14,8 +14,6 @@ logger = logging.getLogger(__name__)
 
 genai.configure(api_key=settings.GOOGLE_API_KEY)
 
-
-
 class JDAnalyzer:
 
     def analyze(self, jd_text: str) -> JDEntities:

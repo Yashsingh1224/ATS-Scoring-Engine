@@ -18,10 +18,34 @@ class ScoringEngine:
         "dotnet": ".net"
     }
 
+    REQUIRED_SECTIONS = [
+        "summary",
+        "experience", 
+        "education", 
+        "skills", 
+        "projects"
+    ]
+
     def _normalize_skill(self, skill: str) -> str:
         """Normalize skill string: lowercase, strip, resolve synonyms."""
         s = skill.lower().strip()
         return self.COMMON_SYNONYMS.get(s, s)
+
+    def _normalize_section(self, section: str) -> str:
+        """Normalize section name for comparison."""
+        s = section.lower().strip()
+        # Common variations mapping
+        if "work" in s or "employment" in s or "history" in s:
+            return "experience"
+        if "academic" in s or "qualification" in s:
+            return "education"
+        if "tech" in s or "competencies" in s:
+            return "skills"
+        if "pro" in s and "file" in s: # Profile
+            return "summary"
+        if "objective" in s:
+            return "summary"
+        return s
 
     def _is_match(self, skill1: str, skill2: str, threshold: float = 0.85) -> bool:
         """Check if two skills match using fuzzy string comparison."""
@@ -101,31 +125,54 @@ class ScoringEngine:
                 ratio = resume.total_experience_years / jd.min_experience_years
                 exp_score = min(ratio * 30.0, 30.0)
 
-        # 3. Project Scoring (Weight 20%)
-        # More granular project scoring
+        # 3. Project Scoring (Weight 10%)
+        # Adjusted weight from 20 to 10 for project scoring
         project_count = len(resume.projects)
         if project_count >= 2:
-            project_score = 20.0
-        elif project_count == 1:
             project_score = 10.0
+        elif project_count == 1:
+            project_score = 5.0
         else:
             project_score = 0.0
 
-        # 4. Final Score Calculation
-        total_score = round(skill_score + exp_score + project_score, 2)
+        # 4. Section Scoring (Weight 10%)
+        # Check for presence of required sections
+        found_sections = [self._normalize_section(s) for s in resume.sections]
+        matched_sections = 0
+        for required in self.REQUIRED_SECTIONS:
+            # Simple substring check after normalization
+            if any(required in s for s in found_sections):
+                matched_sections += 1
+            # Fallback checks if specific lists are populated even if header wasn't explicit
+            elif required == "skills" and resume.skills:
+                matched_sections += 1
+            elif required == "experience" and resume.experience:
+                matched_sections += 1
+            elif required == "projects" and resume.projects:
+                matched_sections += 1
+            elif required == "education" and resume.education:
+                matched_sections += 1
 
-        # 5. Create Response Object
+        # Calculate section score (2 points per section for 5 sections = 10 points)
+        section_score = (matched_sections / len(self.REQUIRED_SECTIONS)) * 10.0
+
+        # 5. Final Score Calculation
+        total_score = round(skill_score + exp_score + project_score + section_score, 2)
+
+        # 6. Create Response Object
         breakdown = ScoreBreakdown(
             skill_score=round(skill_score, 2),
             experience_score=round(exp_score, 2),
-            project_score=round(project_score, 2)
+            project_score=round(project_score, 2),
+            section_score=round(section_score, 2)
         )
 
         summary = (
             f"Candidate Score: {total_score}/100. "
-            f"Skills Match: {len(matched_display)}/{len(jd_skills_map)} found ({int(skill_score)}/50 pts). "
-            f"Experience: {resume.total_experience_years} years vs {jd.min_experience_years} required ({int(exp_score)}/30 pts). "
-            f"Projects: {project_count} found ({int(project_score)}/20 pts)."
+            f"Skills: {int(skill_score)}/50. "
+            f"Exp: {int(exp_score)}/30. "
+            f"Proj: {int(project_score)}/10. "
+            f"Sections: {int(section_score)}/10 ({matched_sections}/{len(self.REQUIRED_SECTIONS)} found)."
         )
 
         return MatchResponse(

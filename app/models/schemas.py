@@ -30,6 +30,8 @@ class ResumeEntities(BaseModel):
 
     education: List[str] = []
 
+    sections: List[str] = []
+
 
 
 class JDEntities(BaseModel):
@@ -53,6 +55,8 @@ class ScoreBreakdown(BaseModel):
     experience_score: float
 
     project_score: float
+
+    section_score: float
 
 
 

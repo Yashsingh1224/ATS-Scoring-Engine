@@ -66,6 +66,7 @@ class ResumeProcessor:
         prompt = f"""
 
         You are an ATS parser. Extract data from this resume into JSON.
+        Identify the distinct section headers present in the resume (e.g., "Summary", "Work Experience", "Education", "Skills", "Projects", "Certifications", "Contact") and list them in the "sections" field. And note - for the experience field, only extract the relevant experience years, not the total years. Like if a guy has worked in HR department for 5 years but applying for a software role, don't count those 5 years in the experience field.
 
         Strict JSON Schema:
 
@@ -81,7 +82,9 @@ class ResumeProcessor:
 
             "projects": ["title1", "title2"],
 
-            "education": ["degree1"]
+            "education": ["degree1"],
+
+            "sections": ["Section Header 1", "Section Header 2"]
 
         }}
 
