@@ -30,8 +30,11 @@ async def score_resume(
         raise HTTPException(status_code=400, detail="Could not read PDF text")
 
     # 2. Extract Entities (Gemini)
-    resume_data = resume_processor.extract_entities(raw_resume_text)
+    # Analyze JD first to get the job title for context-aware resume parsing
     jd_data = jd_analyzer.analyze(jd_text)
+    
+    # Pass job title to resume processor to calculate relevant experience
+    resume_data = resume_processor.extract_entities(raw_resume_text, job_description_title=jd_data.job_title)
 
     # Parse weights if provided
     weight_dict = {}

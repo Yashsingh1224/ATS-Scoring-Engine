@@ -36,6 +36,8 @@ class ResumeEntities(BaseModel):
 
 class JDEntities(BaseModel):
 
+    job_title: Optional[str] = None
+
     required_skills: List[str] = []
 
     min_experience_years: float = 0.0

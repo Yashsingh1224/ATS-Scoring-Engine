@@ -41,6 +41,8 @@ class JDAnalyzer:
 
         {{
 
+            "job_title": "string",
+
             "required_skills": ["skill1", "skill2"],
 
             "min_experience_years": float,
