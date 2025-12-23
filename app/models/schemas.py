@@ -31,6 +31,8 @@ class ResumeEntities(BaseModel):
     education: List[str] = []
 
     sections: List[str] = []
+    
+    grammar_errors: List[str] = []
 
 
 
@@ -59,6 +61,8 @@ class ScoreBreakdown(BaseModel):
     project_score: float
 
     section_score: float
+    
+    spelling_and_grammar_score: float
 
 
 

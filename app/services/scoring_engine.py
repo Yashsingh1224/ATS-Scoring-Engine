@@ -107,23 +107,24 @@ class ScoringEngine:
             else:
                 skill_score = 0.0
 
-        # 2. Experience Scoring (Weight 30%)
+        # 2. Experience Scoring (Weight 25%)
         # More robust experience logic with buffer
         EXP_BUFFER = 0.5  # Allow 0.5 years deficit to still get nearly full points
+        MAX_EXP_SCORE = 25.0
         
         if jd.min_experience_years == 0:
-            exp_score = 30.0
+            exp_score = MAX_EXP_SCORE
         elif resume.total_experience_years >= jd.min_experience_years:
-            exp_score = 30.0
+            exp_score = MAX_EXP_SCORE
         else:
             diff = jd.min_experience_years - resume.total_experience_years
             if diff <= EXP_BUFFER:
-                # Penalty is reduced if within buffer
-                exp_score = 28.0 
+                # Penalty is reduced if within buffer (approx 93% of max score)
+                exp_score = MAX_EXP_SCORE * 0.93
             else:
                 # Linear drop-off
                 ratio = resume.total_experience_years / jd.min_experience_years
-                exp_score = min(ratio * 30.0, 30.0)
+                exp_score = min(ratio * MAX_EXP_SCORE, MAX_EXP_SCORE)
 
         # 3. Project Scoring (Weight 10%)
         # Adjusted weight from 20 to 10 for project scoring
@@ -156,23 +157,30 @@ class ScoringEngine:
         # Calculate section score (2 points per section for 5 sections = 10 points)
         section_score = (matched_sections / len(self.REQUIRED_SECTIONS)) * 10.0
 
-        # 5. Final Score Calculation
-        total_score = round(skill_score + exp_score + project_score + section_score, 2)
+        # 5. Grammar & Spelling Scoring (Weight 5%)
+        # Deduct 1 point per error found
+        error_count = len(resume.grammar_errors)
+        grammar_score = max(5.0 - error_count, 0.0)
 
-        # 6. Create Response Object
+        # 6. Final Score Calculation
+        total_score = round(skill_score + exp_score + project_score + section_score + grammar_score, 2)
+
+        # 7. Create Response Object
         breakdown = ScoreBreakdown(
             skill_score=round(skill_score, 2),
             experience_score=round(exp_score, 2),
             project_score=round(project_score, 2),
-            section_score=round(section_score, 2)
+            section_score=round(section_score, 2),
+            spelling_and_grammar_score=round(grammar_score, 2)
         )
 
         summary = (
             f"Candidate Score: {total_score}/100. "
             f"Skills: {int(skill_score)}/50. "
-            f"Exp: {int(exp_score)}/30. "
+            f"Exp: {int(exp_score)}/25. "
             f"Proj: {int(project_score)}/10. "
-            f"Sections: {int(section_score)}/10 ({matched_sections}/{len(self.REQUIRED_SECTIONS)} found)."
+            f"Sections: {int(section_score)}/10. "
+            f"Grammar: {int(grammar_score)}/5 ({error_count} errors)."
         )
 
         return MatchResponse(

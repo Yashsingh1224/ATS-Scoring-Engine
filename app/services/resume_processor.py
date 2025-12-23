@@ -1,22 +1,11 @@
-import google.generativeai as genai
-
 import json
-
 import pypdf
-
 import io
-
 import logging
-
-from app.core.config import settings
-
+from app.services.model_manager import ModelManager
 from app.models.schemas import ResumeEntities
 
 logger = logging.getLogger(__name__)
-
-genai.configure(api_key=settings.GOOGLE_API_KEY)
-
-
 
 class ResumeProcessor:
 
@@ -46,7 +35,7 @@ class ResumeProcessor:
 
     def extract_entities(self, raw_text: str, job_description_title: str = None) -> ResumeEntities:
 
-        """Send raw text to Gemini and get structured JSON."""
+        """Send raw text to Vertex AI and get structured JSON."""
 
         if not raw_text or len(raw_text.strip()) == 0:
 
@@ -58,17 +47,14 @@ class ResumeProcessor:
         if job_description_title:
              experience_instruction = f"total_experience_years: float (sum of years ONLY for roles relevant to the target job '{job_description_title}'. Ignore unrelated experience like HR if applying for Engineering)"
 
-        model = genai.GenerativeModel(
-            'gemini-2.5-flash',
-            generation_config={"temperature": 0.0}
-        )
-
+        model_manager = ModelManager()
         
 
         prompt = f"""
 
         You are an ATS parser. Extract data from this resume into JSON.
         Identify the distinct section headers present in the resume (e.g., "Summary", "Work Experience", "Education", "Skills", "Projects", "Certifications", "Contact") and list them in the "sections" field.
+        Also, perform a brief check for spelling and grammatical errors in the resume text. List any significant errors found in the "grammar_errors" field. If none are found, return an empty list.
 
         Strict JSON Schema:
 
@@ -86,7 +72,9 @@ class ResumeProcessor:
 
             "education": ["degree1"],
 
-            "sections": ["Section Header 1", "Section Header 2"]
+            "sections": ["Section Header 1", "Section Header 2"],
+            
+            "grammar_errors": ["Spelling error: 'manger' instead of 'manager'", "Grammar error: 'I has worked'"]
 
         }}
 
@@ -98,30 +86,16 @@ class ResumeProcessor:
 
         try:
 
-            logger.info("Calling Gemini API for resume extraction...")
+            logger.info("Calling Vertex AI for resume extraction...")
 
-            response = model.generate_content(prompt)
-
-            logger.debug(f"Gemini response received: {response.text[:100]}...")
-
-            
-
-            clean_json = response.text.replace('```json', '').replace('```', '').strip()
-
-            data = json.loads(clean_json)
+            data = model_manager.generate_content(prompt)
 
             logger.info(f"Successfully extracted resume entities: {len(data.get('skills', []))} skills found")
 
             return ResumeEntities(**data)
 
-        except json.JSONDecodeError as e:
-
-            logger.error(f"JSON parsing error in resume extraction: {e}")
-
-            raise ValueError(f"Failed to parse Gemini response as JSON: {e}")
-
         except Exception as e:
 
-            logger.error(f"Gemini Resume Error: {type(e).__name__}: {e}")
+            logger.error(f"Vertex AI Resume Error: {type(e).__name__}: {e}")
 
             raise

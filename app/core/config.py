@@ -6,9 +6,12 @@ load_dotenv()
 
 class Settings(BaseSettings):
     PROJECT_NAME: str = os.getenv("PROJECT_NAME", "ATS Engine")
-    GOOGLE_API_KEY: str = os.getenv("GOOGLE_API_KEY")
     
-    if not GOOGLE_API_KEY:
-        raise ValueError("GOOGLE_API_KEY not found in .env file")
+    # Vertex AI Configuration
+    GCP_PROJECT_ID: str = os.getenv("GCP_PROJECT_ID")
+    GCP_LOCATION: str = os.getenv("GCP_LOCATION", "us-central1")
+    
+    # Optional: Keep GOOGLE_API_KEY if needed for fallback or other services, but make it optional
+    GOOGLE_API_KEY: str = os.getenv("GOOGLE_API_KEY", "")
 
 settings = Settings()

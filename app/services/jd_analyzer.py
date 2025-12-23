@@ -1,18 +1,13 @@
-import google.generativeai as genai
-
 import json
 
 import logging
 
-from app.core.config import settings
-
 from app.models.schemas import JDEntities
-
+from app.services.model_manager import ModelManager
 
 
 logger = logging.getLogger(__name__)
 
-genai.configure(api_key=settings.GOOGLE_API_KEY)
 
 class JDAnalyzer:
 
@@ -26,10 +21,7 @@ class JDAnalyzer:
 
             
 
-        model = genai.GenerativeModel(
-            'gemini-2.5-flash',
-            generation_config={"temperature": 0.0}
-        )
+        model_manager = ModelManager()
 
         
 
@@ -62,29 +54,17 @@ class JDAnalyzer:
 
         try:
 
-            logger.info("Calling Gemini API for job description analysis...")
+            logger.info("Calling Vertex AI for job description analysis...")
 
-            response = model.generate_content(prompt)
-
-            logger.debug(f"Gemini response received: {response.text[:100]}...")
-
-            clean_json = response.text.replace('```json', '').replace('```', '').strip()
-
-            data = json.loads(clean_json)
+            data = model_manager.generate_content(prompt)
 
             logger.info(f"Successfully extracted JD entities: {len(data.get('required_skills', []))} required skills found")
 
             return JDEntities(**data)
 
-        except json.JSONDecodeError as e:
-
-            logger.error(f"JSON parsing error in JD analysis: {e}")
-
-            raise ValueError(f"Failed to parse Gemini response as JSON: {e}")
-
         except Exception as e:
 
-            logger.error(f"Gemini JD Error: {type(e).__name__}: {e}")
+            logger.error(f"Vertex AI JD Error: {type(e).__name__}: {e}")
 
             raise
 
